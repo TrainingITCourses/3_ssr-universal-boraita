@@ -1,53 +1,38 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { map } from 'rxjs/operators';
+import { map, tap } from 'rxjs/operators';
 
-import { GlobalStore } from '../store/global/global-store.state';
-import {
-  LoadLaunches,
-  LoadStatuses,
-  LoadAgencies,
-  LoadTypes
-} from '../store/global/global-store.actions';
+import { of } from 'rxjs/internal/observable/of';
 
 @Injectable()
 export class ApiService {
-  constructor(private http: HttpClient, private global: GlobalStore) {}
-  key = 'launches';
+  constructor(private http: HttpClient) {}
   getAgencies() {
     return this.http
       .get('../assets/data/agencies.json')
-      .pipe(map(data => data['agencies']))
-      .subscribe(agencies => this.global.dispatch(new LoadAgencies(agencies)));
+      .pipe(map(data => data['agencies']));
   }
   getStatues() {
-    this.http
+    return this.http
       .get('../assets/data/launchstatus.json')
-      .pipe(map(data => data['types']))
-      .subscribe(statues => this.global.dispatch(new LoadStatuses(statues)));
+      .pipe(map(data => data['types']));
   }
   getTypes() {
     return this.http
       .get('../assets/data/missiontypes.json')
-      .pipe(map(data => data['types']))
-      .subscribe(types => {
-        this.global.dispatch(new LoadTypes(types));
-      });
+      .pipe(map(data => data['types']));
   }
-  getAllLaunches() {
-    const localLaunches = localStorage.getItem(this.key);
+  getAllLaunches = key => {
+    const localLaunches = localStorage.getItem(key);
     if (localLaunches) {
-      this.global.dispatch(new LoadLaunches(JSON.parse(localLaunches)));
+      return of(JSON.parse(localLaunches));
     } else {
-      this.http
-        .get('../assets/data/launches.json')
-        .pipe(map(data => data[this.key]))
-        .subscribe(
-          launches => (
-            localStorage.setItem(this.key, JSON.stringify(launches)),
-            this.global.dispatch(new LoadLaunches(launches))
-          )
-        );
+      return this.http.get('../assets/data/launches.json').pipe(
+        map(data => data[key]),
+        tap(launches => {
+          localStorage.setItem(key, JSON.stringify(launches));
+        })
+      );
     }
-  }
+  };
 }
